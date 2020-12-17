@@ -1,12 +1,11 @@
 package com.snake
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import kotlin.math.max
+import kotlin.math.min
 
 class SnakeView @JvmOverloads constructor(
     context: Context,
@@ -36,12 +35,77 @@ class SnakeView @JvmOverloads constructor(
         strokeWidth = 5f
     }
 
-    data class Board(var topX, var topY, var bottomX, var bottomY)
+    data class Board(
+        var topX: Float = 0f,
+        var topY: Float = 0f,
+        var bottomX: Float = 0f,
+        var bottomY: Float = 0f
+    )
 
-    val gameBoard: Board = Board()
+    data class GameSquare(
+        var x: Int = 0,
+        var y: Int = 0,
+        var topX: Float = 0f,
+        var topY: Float = 0f,
+        var bottomX: Float = 0f,
+        var bottomY: Float = 0f
+    )
+
+//    val gameBoard: RectF = RectF(0f, 0f, 0f, 0f)
+
+    val gameBoard2: Board = Board(0f, 0f, 0f, 0f)
+
+    val listOfGameSquare = mutableListOf<GameSquare>()
+
+    var zeroY = 0f
+    var heightPadding = 0f
+
+    var numberOfElements = 11
+    var elementWidth = 0f
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
+
+        val max = max(width.toFloat(), height.toFloat())
+        val min = min(width.toFloat(), height.toFloat())
+
+        heightPadding = ((max - min) / 2)
+
+        elementWidth = max / numberOfElements
+
+        listOfGameSquare.clear()
+        for (elementY in 0..numberOfElements) {
+            for (elementX in 0..numberOfElements) {
+                listOfGameSquare.add(
+                    GameSquare(
+                        elementX,
+                        elementY,
+                        elementX * elementWidth,
+                        elementX * elementWidth + heightPadding,
+                        elementX * elementWidth + elementWidth,
+                        elementX * elementWidth + elementWidth
+
+                    )
+                )
+            }
+        }
+
+        zeroY = (max - heightPadding)
+
+//        gameBoard.set(
+//            0f,
+//            0f + heightPadding,
+//            0f + min,
+//            zeroY
+//        )
+
+        gameBoard2.apply {
+            topX = 0f
+            topY = 0f + heightPadding
+            bottomX = 0f + min
+            bottomY = zeroY
+        }
+    }
 
 //        widthInstance = measuredWidth.toFloat() / 100f
 //        recHeight = measuredHeight.toFloat()
@@ -64,5 +128,32 @@ class SnakeView @JvmOverloads constructor(
 //            rectPath.reset()
 //            rectPath.addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
 //        }
+
+
+    override fun onDraw(canvas: Canvas?) {
+        super.onDraw(canvas)
+
+//        canvas?.drawRect(gameBoard, greenPaint)
+
+        with(gameBoard2) {
+            canvas?.drawRect(
+                topX,
+                topY,
+                bottomX,
+                bottomY,
+                blackPaint
+            )
+        }
+
+        drawBoardSquares(canvas)
+
+    }
+
+    private fun drawBoardSquares(canvas: Canvas?) = canvas?.apply {
+
+        listOfGameSquare.forEach { square ->
+            drawRect(square.topX, square.topY, square.bottomX, square.bottomY, yellowPaint)
+        }
+
     }
 }
