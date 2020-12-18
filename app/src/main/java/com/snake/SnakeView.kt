@@ -2,8 +2,6 @@ package com.snake
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
@@ -21,35 +19,13 @@ class SnakeView @JvmOverloads constructor(
     private val scopeMain = CoroutineScope(job + Dispatchers.Main)
     private val scopeIO = CoroutineScope(job + Dispatchers.IO)
 
-    private val yellowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW
-    }
-
-    private val redPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.RED
-    }
-
-    private val greenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.GREEN
-    }
-
-    private val blackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
-        strokeCap = Paint.Cap.ROUND
-        strokeWidth = 5f
-        textSize = 22f
-    }
+    val paintBucket = PaintBucket
 
     data class Board(
         var left: Float = 0f,
         var top: Float = 0f,
         var right: Float = 0f,
         var bottom: Float = 0f
-    )
-
-    data class SnakeSquare(
-        var x: Int = 0,
-        var y: Int = 0
     )
 
     data class GameSquare(
@@ -70,7 +46,12 @@ class SnakeView @JvmOverloads constructor(
         }
 
         fun findBody() =
-            listOf(leftDirection, rightDirection, topDirection, bottomDirection).find { it?.content == SquareContent.SnakeBody }
+            listOf(
+                leftDirection,
+                rightDirection,
+                topDirection,
+                bottomDirection
+            ).find { it?.content == SquareContent.SnakeBody }
 
         fun setValues(square: GameSquare) = this.apply {
             x = square.x
@@ -96,6 +77,7 @@ class SnakeView @JvmOverloads constructor(
         object Food : SquareContent()
         object SnakeHead : SquareContent()
         object SnakeBody : SquareContent()
+        object SnakeEnd : SquareContent()
     }
 
     val gameBoard: Board = Board(0f, 0f, 0f, 0f)
@@ -108,17 +90,25 @@ class SnakeView @JvmOverloads constructor(
     var numberOfElements = 10
     var elementWidth = 0f
     var gameActive = false
+    var foodOnTable = false
 
     enum class MoveDirection {
         TOP, BOTTOM, LEFT, RIGHT
     }
 
     private var snakeMoveDirection = MoveDirection.RIGHT
-    private var snakeSquares = mutableListOf<SnakeSquare>()
+    private var snakeSquares = mutableListOf<GameSquare>()
 
     private var snakeLength = 3
 
     fun changeDirection(newDirection: MoveDirection) {
+//        val ss = when (snakeMoveDirection) {
+//            MoveDirection.TOP -> currentSquare.topDirection
+//            MoveDirection.BOTTOM -> currentSquare.bottomDirection
+//            MoveDirection.LEFT -> currentSquare.leftDirection
+//            MoveDirection.RIGHT -> currentSquare.rightDirection
+//        }
+
         snakeMoveDirection = newDirection
     }
 
@@ -178,8 +168,7 @@ class SnakeView @JvmOverloads constructor(
             }
         }
 
-        calculateNewSnakeCoords()
-        startGame()
+      restart()
     }
 
 
@@ -187,7 +176,7 @@ class SnakeView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         with(gameBoard) {
-            canvas?.drawRect(left, top, right, bottom, blackPaint)
+            canvas?.drawRect(left, top, right, bottom, paintBucket.blackPaint)
         }
 
         drawBoardSquares(canvas)
@@ -197,11 +186,11 @@ class SnakeView @JvmOverloads constructor(
     private fun drawBoardSquares(canvas: Canvas?) = canvas?.apply {
         listOfGameSquare.forEach { square ->
             drawRect(
-                square.left + 2f,
-                square.top + 2f,
-                square.right - 2f,
-                square.bottom - 2f,
-                yellowPaint
+                square.left ,
+                square.top ,
+                square.right ,
+                square.bottom ,
+                paintBucket.boardBackgroundPaint
             )
 
             drawSquareContent(square, canvas)
@@ -210,46 +199,37 @@ class SnakeView @JvmOverloads constructor(
 
     private fun drawSquareContent(gameSquare: GameSquare, canvas: Canvas?) = canvas?.apply {
         when (gameSquare.content) {
-            is SquareContent.EmptySquare -> {
-//                Log.d("TEST", "draw EmptySquare in ${gameSquare.x} ${gameSquare.y}}}")
-                drawText(
-                    "${gameSquare.x} ${gameSquare.y}",
-                    gameSquare.left + 4f,
-                    gameSquare.bottom - 4f,
-                    blackPaint
-                )
-            }
-            is SquareContent.Food -> {
-//                Log.d("TEST", "draw Food in ${gameSquare.x} ${gameSquare.y}}}")
-                drawFood(gameSquare, canvas)
-            }
-            is SquareContent.SnakeHead -> {
-//                Log.d("TEST", "draw SnakeHead in ${gameSquare.x} ${gameSquare.y}}}")
-                drawSnakeHead(gameSquare, canvas)
-            }
-            is SquareContent.SnakeBody -> {
-//                Log.d("TEST", "draw SnakeBody in ${gameSquare.x} ${gameSquare.y}}}")
-                drawSnakeBody(gameSquare, canvas)
-            }
+            is SquareContent.Food -> { drawFood(gameSquare, canvas) }
+            is SquareContent.SnakeHead -> { drawSnakeHead(gameSquare, canvas) }
+            is SquareContent.SnakeBody -> { drawSnakeBody(gameSquare, canvas) }
         }
     }
 
     private fun drawFood(gameSquare: GameSquare, canvas: Canvas?) = canvas?.apply {
         drawRect(
-            gameSquare.left + 3f,
-            gameSquare.top + 3f,
-            gameSquare.right - 3f,
-            gameSquare.bottom - 3f,
-            redPaint
+            gameSquare.left + 20f,
+            gameSquare.top + 20f,
+            gameSquare.right - 20f,
+            gameSquare.bottom - 20f,
+            paintBucket.foodPaint
         )
     }
 
     private fun drawSnakeHead(gameSquare: GameSquare, canvas: Canvas?) = canvas?.apply {
+        var headTopX = 0f
+        var headTopY = 0f
+        val rotation = when (snakeMoveDirection) {
+            MoveDirection.TOP -> 90f
+            MoveDirection.BOTTOM -> -90f
+            MoveDirection.LEFT -> 180f
+            MoveDirection.RIGHT -> 180f
+        }
+
         drawCircle(
             gameSquare.left + (gameSquare.right - gameSquare.left) / 2,
             gameSquare.bottom + (gameSquare.top - gameSquare.bottom) / 2,
             ((gameSquare.right - gameSquare.left) / 2) - 10f,
-            redPaint
+            paintBucket.snakePaint
         )
     }
 
@@ -259,155 +239,119 @@ class SnakeView @JvmOverloads constructor(
             gameSquare.top + 20f,
             gameSquare.right - 20f,
             gameSquare.bottom - 20f,
-            redPaint
+            paintBucket.snakePaint
         )
     }
 
-    private fun calculateNewSnakeCoords() {
+    private fun createNewSnake() {
+        snakeSquares.clear()
         val center = numberOfElements / 2
 
         Log.d("TEST", "snake center $center")
         listOfGameSquare.find { it.x == center && it.y == center }
             ?.apply {
                 setNewContent(SquareContent.SnakeHead)
-
+                snakeSquares.add(this)
                 Log.d("TEST", "snake head ${this.x} ${this.y}")
 
                 var currentGameSquare = this
-                for (bodyCount in 0..snakeLength) {
+                for (bodyCount in 0 until snakeLength) {
                     val nextSquare = currentGameSquare.leftDirection
+                    snakeSquares.add(nextSquare ?: return@apply)
 
-                    Log.d("TEST", "snake body ${nextSquare?.x} ${nextSquare?.y}")
+                    Log.d("TEST", "snake body ${nextSquare.x} ${nextSquare.y}")
 
-                    nextSquare?.apply {
+                    nextSquare.apply {
                         content = SquareContent.SnakeBody
                         currentGameSquare = this
                     }
                 }
 
-//                var direction = snakeMoveDirection
-//
-//                for (count in 0..snakeLength) {
-//                    val nextSquare = when (direction) {
-//                        MoveDirection.TOP -> currentSquare.topDirection
-//                        MoveDirection.BOTTOM -> currentSquare.bottomDirection
-//                        MoveDirection.LEFT -> currentSquare.leftDirection
-//                        MoveDirection.RIGHT -> currentSquare.rightDirection
-//                    }
-//                    nextSquare?.setNewContent(currentSquare.content)
-//                }
+                val endSquare = currentGameSquare.leftDirection
+                endSquare?.apply {
+                    content = SquareContent.SnakeEnd
+                    snakeSquares.add(this)
+                }
+
+                Log.d("TEST", "snake end ${endSquare?.x} ${endSquare?.y}")
             }
     }
-//
-//        listOfGameSquare.find { it.x == snakeHeadX - 1 && it.y == snakeHeadY }
-//            ?.apply {
-//                this.setNewContent(SquareContent.SnakeBody)
-//            }
-//
-//        listOfGameSquare.find { it.x == snakeHeadX - 2 && it.y == snakeHeadY }
-//            ?.apply {
-//                this.setNewContent(SquareContent.SnakeBody)
-//            }
-//
-//        listOfGameSquare.find { it.x == snakeHeadX - 3 && it.y == snakeHeadY }
-//            ?.apply {
-//                this.setNewContent(SquareContent.SnakeBody)
-//            }
-
 
     private fun moveSnake() {
-        var currentHead: GameSquare =
-            listOfGameSquare.find { it.content == SquareContent.SnakeHead } ?: return
-        var direction = snakeMoveDirection
 
-        val peekSquare = when (direction) {
+        Log.d("TEST", "Snake Squares ${snakeSquares.map { "${it.x} ${it.y}" }}")
+        var currentHead: GameSquare = snakeSquares.first()
+        var currentEnd: GameSquare = snakeSquares.last()
+
+        val peekSquare = when (snakeMoveDirection) {
             MoveDirection.TOP -> {
-                direction = MoveDirection.TOP
                 currentHead.topDirection
             }
             MoveDirection.BOTTOM -> {
-                direction = MoveDirection.BOTTOM
                 currentHead.bottomDirection
             }
             MoveDirection.LEFT -> {
-                direction = MoveDirection.LEFT
                 currentHead.leftDirection
             }
             MoveDirection.RIGHT -> {
-                direction = MoveDirection.RIGHT
                 currentHead.rightDirection
             }
         }
-        peekSquare?.content = SquareContent.SnakeHead
-        currentHead.content = SquareContent.SnakeBody
 
-        for (count in 0 until snakeLength) {
-//            val nextSquare = when (direction) {
-//                MoveDirection.TOP -> {
-//                    direction = MoveDirection.TOP
-//                    currentSquare.topDirection
-//                }
-//                MoveDirection.BOTTOM -> {
-//                    direction = MoveDirection.BOTTOM
-//                    currentSquare.bottomDirection
-//                }
-//                MoveDirection.LEFT -> {
-//                    direction = MoveDirection.LEFT
-//                    currentSquare.leftDirection
-//                }
-//                MoveDirection.RIGHT -> {
-//                    direction = MoveDirection.RIGHT
-//                    currentSquare.rightDirection
-//                }
-//            }
-//            }
-
-
-//        for (count in 0 until snakeLength) {
-//            val nextSquare = when (direction) {
-//                MoveDirection.TOP -> {
-//                    direction = MoveDirection.TOP
-//                    currentSquare.topDirection
-//                }
-//                MoveDirection.BOTTOM -> {
-//                    direction = MoveDirection.BOTTOM
-//                    currentSquare.bottomDirection
-//                }
-//                MoveDirection.LEFT -> {
-//                    direction = MoveDirection.LEFT
-//                    currentSquare.leftDirection
-//                }
-//                MoveDirection.RIGHT -> {
-//                    direction = MoveDirection.RIGHT
-//                    currentSquare.rightDirection
-//                }
-//            }
-//            nextSquare?.setNewContent(currentHead.content)
+        peekSquare?.apply {
+            snakeSquares.add(0, peekSquare)
+            currentHead.setNewContent(SquareContent.SnakeBody)
         }
+
+        when (peekSquare?.content) {
+            is SquareContent.EmptySquare -> {
+                currentEnd.clearSquare()
+                snakeSquares.removeAt(snakeSquares.size - 1)
+            }
+            is SquareContent.Food -> {
+                foodOnTable = false
+            }
+            else -> {
+                gameActive = false
+            }
+        }
+
+        peekSquare?.setNewContent(SquareContent.SnakeHead)
     }
 
     fun startGame() = scopeIO.launch {
         gameActive = true
         while (gameActive) {
-            listOfGameSquare.find { it.content == SquareContent.SnakeHead }?.let {
-                moveSnake()
-                invalidate()
-            }
+            moveSnake()
+            startFood()
+            invalidate()
             delay(400)
         }
     }
+
+    fun startFood() = scopeIO.launch {
+        if (foodOnTable.not()) {
+            val square = listOfGameSquare.random()
+            if (square.content == SquareContent.EmptySquare && snakeSquares.contains(square)
+                    .not()
+            ) {
+                square.setNewContent(SquareContent.Food)
+                foodOnTable = true
+                invalidate()
+            }
+        }
+    }
+
+    fun restart() {
+        gameActive = false
+        foodOnTable = false
+        listOfGameSquare.forEach { it.clearSquare() }
+        createNewSnake()
+        snakeMoveDirection = MoveDirection.RIGHT
+        startGame()
+    }
 }
-//
-//    fun startFood() = scopeIO.launch {
-//        while (true) {
-//            val square = listOfGameSquare.random()
-//            if (square.content == SquareContent.EmptySquare) {
-//                square.setNewContent(SquareContent.Food)
-//                invalidate()
-//            }
-//            delay(50)
-//        }
-//    }
+
 
 //    override fun onAttachedToWindow() {
 //        super.onAttachedToWindow()

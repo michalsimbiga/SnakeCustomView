@@ -9,6 +9,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        resetButton.setOnClickListener { snake.restart() }
+
         directionTop.setOnClickListener { snake.changeDirection(SnakeView.MoveDirection.TOP) }
         directionLeft.setOnClickListener { snake.changeDirection(SnakeView.MoveDirection.LEFT) }
         directionRight.setOnClickListener { snake.changeDirection(SnakeView.MoveDirection.RIGHT) }
