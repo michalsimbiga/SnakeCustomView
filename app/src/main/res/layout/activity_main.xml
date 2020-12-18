@@ -6,24 +6,34 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-   <Button
-       android:id="@+id/resetButton"
-       android:layout_width="wrap_content"
-       android:layout_height="wrap_content"
-       android:layout_margin="20dp"
-       android:text="Restart"
-       app:layout_constraintTop_toTopOf="parent"
-       app:layout_constraintStart_toStartOf="parent"
-       app:layout_constraintEnd_toEndOf="parent"/>
+
+    <Button
+        android:id="@+id/startButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:text="Start"
+        app:layout_constraintEnd_toStartOf="@id/resetButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/resetButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Restart"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/startButton"
+        app:layout_constraintTop_toTopOf="@id/startButton" />
 
     <com.snake.SnakeView
         android:id="@+id/snake"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/directionTop"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/resetButton"
-        app:layout_constraintBottom_toBottomOf="@id/directionTop"/>
+        app:layout_constraintTop_toBottomOf="@id/resetButton" />
 
     <Button
         android:id="@+id/directionTop"
@@ -31,8 +41,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:text="↑"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/directionLeft"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/snake"
         tools:ignore="HardcodedText" />
@@ -42,9 +52,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="←"
+        app:layout_constraintBottom_toTopOf="@id/directionBottom"
         app:layout_constraintEnd_toStartOf="@id/directionRight"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/directionBottom"
         app:layout_constraintTop_toBottomOf="@id/directionTop"
         app:layout_constraintVertical_chainStyle="packed"
         tools:ignore="HardcodedText" />
@@ -54,10 +64,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="→"
+        app:layout_constraintBottom_toTopOf="@id/directionBottom"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/directionLeft"
         app:layout_constraintTop_toBottomOf="@id/directionTop"
-        app:layout_constraintBottom_toTopOf="@id/directionBottom"
         app:layout_constraintVertical_chainStyle="packed"
         tools:ignore="HardcodedText" />
 
@@ -66,10 +76,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="↓"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/directionRight"
-        app:layout_constraintBottom_toBottomOf="parent"
         tools:ignore="HardcodedText" />
 
 
