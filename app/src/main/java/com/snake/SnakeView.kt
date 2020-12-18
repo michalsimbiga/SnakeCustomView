@@ -36,20 +36,27 @@ class SnakeView @JvmOverloads constructor(
     }
 
     data class Board(
-        var topX: Float = 0f,
-        var topY: Float = 0f,
-        var bottomX: Float = 0f,
-        var bottomY: Float = 0f
+        var left: Float = 0f,
+        var top: Float = 0f,
+        var right: Float = 0f,
+        var bottom: Float = 0f
     )
 
     data class GameSquare(
         var x: Int = 0,
         var y: Int = 0,
-        var topX: Float = 0f,
-        var topY: Float = 0f,
-        var bottomX: Float = 0f,
-        var bottomY: Float = 0f
+        var left: Float = 0f,
+        var top: Float = 0f,
+        var right: Float = 0f,
+        var bottom: Float = 0f,
+        var content: SquareContent
     )
+
+    sealed class SquareContent {
+        object EmptySquare : SquareContent()
+        class Food(val gameSquareX: Int, val gameSquareY: Int) : SquareContent()
+    }
+
 
 //    val gameBoard: RectF = RectF(0f, 0f, 0f, 0f)
 
@@ -60,7 +67,7 @@ class SnakeView @JvmOverloads constructor(
     var zeroY = 0f
     var heightPadding = 0f
 
-    var numberOfElements = 11
+    var numberOfElements = 5
     var elementWidth = 0f
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -69,78 +76,43 @@ class SnakeView @JvmOverloads constructor(
         val max = max(width.toFloat(), height.toFloat())
         val min = min(width.toFloat(), height.toFloat())
 
+        elementWidth = min / numberOfElements
         heightPadding = ((max - min) / 2)
+        zeroY = (max - heightPadding)
 
-        elementWidth = max / numberOfElements
+        gameBoard2.apply {
+            this.left = 0f
+            this.top = 0f + heightPadding
+            this.right = min
+            this.bottom = zeroY
+        }
 
         listOfGameSquare.clear()
-        for (elementY in 0..numberOfElements) {
+        for (elementY in 0 until numberOfElements) {
             for (elementX in 0..numberOfElements) {
+                val squareLeft = gameBoard2.left + (elementX * elementWidth)
+                val squareTop = gameBoard2.top + (elementY * elementWidth)
+                val squareRight = squareLeft + elementWidth
+                val squareBottom = squareTop + elementWidth
                 listOfGameSquare.add(
-                    GameSquare(
-                        elementX,
-                        elementY,
-                        elementX * elementWidth,
-                        elementX * elementWidth + heightPadding,
-                        elementX * elementWidth + elementWidth,
-                        elementX * elementWidth + elementWidth
-
-                    )
+                    GameSquare(elementX, elementY, squareLeft, squareTop, squareRight, squareBottom)
                 )
             }
         }
 
-        zeroY = (max - heightPadding)
-
-//        gameBoard.set(
-//            0f,
-//            0f + heightPadding,
-//            0f + min,
-//            zeroY
-//        )
-
-        gameBoard2.apply {
-            topX = 0f
-            topY = 0f + heightPadding
-            bottomX = 0f + min
-            bottomY = zeroY
-        }
     }
-
-//        widthInstance = measuredWidth.toFloat() / 100f
-//        recHeight = measuredHeight.toFloat()
-//
-//        dataModel?.let { model ->
-//            normMin = model.normMin.toFloat()
-//            normMax = model.normMax.toFloat()
-//
-//            firstPoint = calculateWidthPercentage(normMin / 2f) * widthInstance
-//            secondPoint = calculateWidthPercentage(normMin) * widthInstance
-//            thirdPoint = calculateWidthPercentage(normMax) * widthInstance
-//            fourthPoint = calculateWidthPercentage(normMax + (normMin / 2f)) * widthInstance
-//
-//            rect.set(
-//                0f,
-//                heightOffset,
-//                measuredWidth.toFloat(),
-//                measuredHeight.toFloat() - heightOffset
-//            )
-//            rectPath.reset()
-//            rectPath.addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
-//        }
 
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
-//        canvas?.drawRect(gameBoard, greenPaint)
 
         with(gameBoard2) {
             canvas?.drawRect(
-                topX,
-                topY,
-                bottomX,
-                bottomY,
+                left,
+                top,
+                right,
+                bottom,
                 blackPaint
             )
         }
@@ -150,10 +122,28 @@ class SnakeView @JvmOverloads constructor(
     }
 
     private fun drawBoardSquares(canvas: Canvas?) = canvas?.apply {
-
         listOfGameSquare.forEach { square ->
-            drawRect(square.topX, square.topY, square.bottomX, square.bottomY, yellowPaint)
-        }
+            drawRect(
+                square.left + 2f,
+                square.top + 2f,
+                square.right - 2f,
+                square.bottom - 2f,
+                yellowPaint
+            )
 
+            drawSquareContent(square, canvas)
+        }
+    }
+
+    private fun drawSquareContent(gameSquare: GameSquare, canvas: Canvas?) = canvas?.apply {
+        when (gameSquare.content) {
+            is SquareContent.EmptySquare -> return@apply
+            is SquareContent.Food -> drawFood(gameSquare, canvas)
+        }
+    }
+
+
+    private fun drawFood(gameSquare: GameSquare, canvas: Canvas?) = canvas?.apply {
+        drawRect(gameSquare.left, gameSquare.top, gameSquare.bottom, gameSquare.right, redPaint)
     }
 }
